@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brassket: NBA Arcade GM — Simulador de Basquete</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        nba: {
+                            blue: '#1d428a',
+                            red: '#c8102e',
+                            gold: '#fdb927',
+                            court: '#e5a65e'
+                        }
+                    },
+                    fontFamily: {
+                        arcade: ['Chakra Petch', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,700;1,900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --team-primary: #552583;
+            --team-secondary: #fdb927;
+            --team-glow: rgba(85, 37, 131, 0.4);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+        }
+        .font-arcade {
+            font-family: 'Chakra Petch', sans-serif;
+        }
+        .font-news {
+            font-family: 'Playfair Display', serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--team-secondary, #f59e0b);
+        }
+        .tab-active {
+            border-color: var(--team-secondary, #f59e0b) !important;
+            color: var(--team-secondary, #f59e0b) !important;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col selection:bg-amber-500 selection:text-black">
+
+    <!-- ==================== TELA DE SELEÇÃO: ERA & TIME ==================== -->
+    <div id="team-select-screen" class="hidden min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0b0f19] to-black">
+        <div class="max-w-5xl w-full text-center my-6">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
+                <span>🏀 Simulador Arcade de Franquias NBA (Inspirado no Brasfoot)</span>
+            </div>
+            <h1 class="text-5xl sm:text-7xl font-black tracking-tight text-white font-arcade uppercase">
+                Brass<span class="text-amber-400">ket</span>
+            </h1>
+            <p class="text-slate-400 mt-2 text-sm sm:text-base max-w-2xl mx-auto">
+                Assuma o cargo de General Manager e Presidente. Escolha a sua era favorita do basquete, treine seus atletas rolando dados, suba o nível do seu técnico, negocie trocas e dispute temporadas consecutivas!
+            </p>
+        </div>
+
+        <div class="max-w-6xl w-full mb-6">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3 px-1">
+                Passo 1: Selecione a Era Histórica do Basquete
+            </h2>
+            <div id="eras-selector-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
+        </div>
+
+        <div class="max-w-6xl w-full">
+            <div class="flex justify-between items-center mb-3 px-1">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Passo 2: Escolha sua Franquia da Era <span id="current-era-title-badge" class="text-white font-mono"></span>
+                </h2>
+            </div>
+            <div id="teams-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 max-h-[50vh] overflow-y-auto pr-2 pb-4"></div>
+        </div>
+    </div>
+
+    <!-- ==================== TELA PRINCIPAL DO JOGO (COM TEMA DINÂMICO) ==================== -->
+    <div id="main-game-screen" class="hidden flex flex-col min-h-screen transition-all duration-700">
+        
+        <!-- Header da Franquia -->
+        <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 lg:px-8 py-3">
+            <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <div id="header-team-badge" class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg border-2 border-white/20">
+                        <span id="header-team-id">LAL</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 id="header-team-name" class="font-extrabold text-white text-base lg:text-lg tracking-tight">Los Angeles Lakers</h2>
+                            <span id="header-era-badge" class="text-[10px] bg-slate-800 text-amber-400 font-mono font-bold px-2 py-0.5 rounded border border-slate-700 uppercase">ANOS 90</span>
+                        </div>
+                        <div class="flex items-center space-x-3 text-xs text-slate-400 mt-0.5">
+                            <span id="header-round-info" class="text-slate-300 font-semibold">Rodada 1 / 10</span>
+                            <span>•</span>
+                            <span class="text-emerald-400 font-mono font-bold">Campanha: <span id="header-record">0V - 0D</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel Financeiro, Nível do Técnico e Controles -->
+                <div class="flex items-center space-x-3">
+                    <div id="header-coach-level"></div>
+
+                    <div class="bg-slate-950/80 px-4 py-1.5 rounded-xl border border-slate-800 flex items-center space-x-2">
+                        <span class="text-xs text-slate-400 font-medium">Orçamento:</span>
+                        <strong id="header-budget" class="text-emerald-400 font-mono font-extrabold text-sm">$45.0M</strong>
+                    </div>
+
+                    <button data-action="change-era-btn" title="Trocar Era ou Franquia" class="px-3 py-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-semibold transition border border-slate-700 flex items-center space-x-1">
+                        <span>⏳</span>
+                        <span>Mudar Era</span>
+                    </button>
+
+                    <button data-action="reset-game" title="Reiniciar Carreira" class="p-2 text-slate-400 hover:text-rose-400 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs transition border border-slate-700">
+                        🔄
+                    </button>
+                </div>
+            </div>
+
+            <!-- Barra de Navegação de Abas -->
+            <div class="max-w-7xl mx-auto mt-3 flex space-x-2 overflow-x-auto pb-1 text-sm font-semibold">
+                <button data-action="nav-tab" data-value="dashboard" data-nav-tab="dashboard" class="px-3 py-2 border-b-2 tab-active flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </button>
+                <button data-action="nav-tab" data-value="roster" data-nav-tab="roster" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>📋</span>
+                    <span>Elenco</span>
+                </button>
+                <button data-action="nav-tab" data-value="training" data-nav-tab="training" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition relative">
+                    <span>🏋️</span>
+                    <span>Treino</span>
+                    <span id="training-avail-badge" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1"></span>
+                </button>
+                <button data-action="nav-tab" data-value="tactics" data-nav-tab="tactics" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>🎯</span>
+                    <span>Táticas</span>
+                </button>
+                <button data-action="nav-tab" data-value="arena" data-nav-tab="arena" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>🏟️</span>
+                    <span>Arena</span>
+                </button>
+                <button data-action="nav-tab" data-value="trades" data-nav-tab="trades" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>🔄</span>
+                    <span>Mercado</span>
+                </button>
+                <button data-action="nav-tab" data-value="inbox" data-nav-tab="inbox" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition relative">
+                    <span>📬</span>
+                    <span>E-mails</span>
+                    <span id="inbox-unread-badge" class="hidden bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full ml-1">0</span>
+                </button>
+                <button data-action="nav-tab" data-value="standings" data-nav-tab="standings" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>📈</span>
+                    <span>Tabela</span>
+                </button>
+                <button data-action="nav-tab" data-value="playoffs" data-nav-tab="playoffs" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition relative">
+                    <span>🏆</span>
+                    <span>Playoffs</span>
+                    <span id="playoffs-active-badge" class="hidden w-2 h-2 rounded-full bg-amber-400 animate-ping ml-1"></span>
+                </button>
+                <button data-action="nav-tab" data-value="awards" data-nav-tab="awards" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>🎖️</span>
+                    <span>Premiações</span>
+                </button>
+                <button data-action="nav-tab" data-value="draft" data-nav-tab="draft" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>🎓</span>
+                    <span>NBA Draft</span>
+                </button>
+                <button data-action="nav-tab" data-value="history" data-nav-tab="history" class="px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 whitespace-nowrap transition">
+                    <span>📜</span>
+                    <span>Histórico</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+
+            <!-- 1. ABA: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <div id="dash-newspaper-box" class="hidden"></div>
+                <div id="dash-next-match-box"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 space-y-3">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
+                            <span>📰 Notícias e Comunicados da Franquia</span>
+                        </h3>
+                        <div id="dash-news-feed" class="space-y-2"></div>
+                    </div>
+
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 mb-3">Guia do GM no Brassket</h3>
+                        <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                            <p>🏋️ <strong class="text-white">Treinamento Pré-Jogo:</strong> Role os dados na aba "Treino" antes de cada partida para evoluir jovens promessas!</p>
+                            <p>🎖️ <strong class="text-white">Nível de Técnico:</strong> Vença partidas para subir de nível e desbloquear o Triângulo de Phil Jackson e a Zona 2-3.</p>
+                            <p>🔄 <strong class="text-white">Trocas no Mercado:</strong> Use a aba "Mercado" para reforçar posições carentes oferecendo dinheiro de compensação.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. ABA: ELENCO & ESCALAÇÃO -->
+            <div id="tab-roster" class="tab-content hidden space-y-4">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Plantel & Rotação</h3>
+                    <p class="text-xs text-slate-400">Os 5 primeiros atletas compõem o quinteto titular. Jogadores lesionados (🏥) não entram em quadra.</p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-950/80 text-[11px] text-slate-400 uppercase font-mono border-b border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4">Jogador / Posição</th>
+                                    <th class="py-3 px-4 text-center">OVR</th>
+                                    <th class="py-3 px-4 text-center" title="Arremesso de 3">3PT</th>
+                                    <th class="py-3 px-4 text-center" title="Infiltração / Garrafão">INS</th>
+                                    <th class="py-3 px-4 text-center" title="Defesa">DEF</th>
+                                    <th class="py-3 px-4 text-center" title="Playmaking">PLY</th>
+                                    <th class="py-3 px-4 text-center" title="Decisivo nos minutos finais">CLUTCH</th>
+                                    <th class="py-3 px-4">Energia</th>
+                                    <th class="py-3 px-4 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roster-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ABA: SESSÃO DE TREINAMENTO (COM DADOS) -->
+            <div id="tab-training" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Centro de Treinamento & Desenvolvimento</h3>
+                    <p class="text-xs text-slate-400">Você tem direito a <strong>1 sessão de treinamento por rodada</strong> antes da partida. Role os dados para evoluir atributos individuais!</p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+                    <div id="training-round-status" class="text-xs font-mono bg-slate-950 p-3 rounded-xl border border-slate-800"></div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-300 block mb-1">Selecione o Atleta para o Treino Individual:</label>
+                            <select id="training-player-select" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white text-sm focus:border-amber-400 outline-none"></select>
+                            <div id="training-odds-display" class="mt-2 text-xs"></div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-300 block mb-1">Fundamento Tático a Aperfeiçoar:</label>
+                            <select id="training-attr-select" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white text-sm focus:border-amber-400 outline-none">
+                                <option value="o3pt">🎯 Arremessos de 3 Pontos (Perímetro)</option>
+                                <option value="ins">⚡ Infiltração & Finalização no Garrafão</option>
+                                <option value="def">🛡️ Defesa Individual & Tocos</option>
+                                <option value="ply">🏀 Playmaking, Visão de Quadra & Passes</option>
+                                <option value="sta">🔋 Físico & Resistência / Stamina</option>
+                            </select>
+                            <p class="text-[11px] text-slate-500 mt-2">Jovens com até 21 anos possuem até 75% de chance de evolução e podem tirar sucesso crítico (+2 OVR)!</p>
+                        </div>
+                    </div>
+
+                    <div id="training-result-box" class="hidden"></div>
+
+                    <div class="flex justify-end pt-2">
+                        <button id="training-roll-action-btn" data-action="roll-training-btn" class="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-sm uppercase tracking-wider rounded-xl shadow-lg transition transform hover:scale-105 flex items-center space-x-2">
+                            <span>🎲 ROLAR DADOS DE TREINAMENTO</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. ABA: TÁTICAS (COM NÍVEL DE TÉCNICO) -->
+            <div id="tab-tactics" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Filosofia de Jogo & Conhecimento Tático</h3>
+                    <p class="text-xs text-slate-400">Vença partidas e conquiste títulos para subir de nível e liberar filosofias históricas consagradas.</p>
+                </div>
+                <div id="tactics-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- 5. ABA: ARENA & FINANÇAS -->
+            <div id="tab-arena" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Administração da Arena</h3>
+                    <p class="text-xs text-slate-400">Melhore as instalações para faturar mais com bilheteria e intimidar os adversários.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg">
+                        <span class="text-xs text-slate-400 block font-semibold uppercase">Ginásio Oficial</span>
+                        <h4 id="arena-name" class="text-lg font-black text-white mt-1">Arena</h4>
+                        <span id="arena-level" class="text-xs text-amber-400 font-mono">Nível 1</span>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg">
+                        <span class="text-xs text-slate-400 block font-semibold uppercase">Capacidade Total</span>
+                        <h4 id="arena-capacity" class="text-2xl font-black text-emerald-400 mt-1 font-mono">18.000 Lugares</h4>
+                        <span class="text-xs text-slate-500">Expansível em lotes de +2.500</span>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-lg">
+                        <span class="text-xs text-slate-400 block font-semibold uppercase">Preço do Ingresso</span>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <button data-action="update-ticket" data-value="-5" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition">-</button>
+                            <h4 id="ticket-price-display" class="text-2xl font-black text-amber-400 font-mono">$60</h4>
+                            <button data-action="update-ticket" data-value="5" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition">+</button>
+                        </div>
+                        <span id="projected-revenue" class="text-xs text-slate-400 mt-1 block">Projeção: $900k por jogo</span>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold uppercase tracking-wider text-slate-400 pt-2">Reformas e Obras Estruturais</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+                        <div>
+                            <span class="text-2xl mb-2 block">🏗️</span>
+                            <h5 class="font-bold text-white text-base">Ampliação de Cadeiras</h5>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">+2.500 assentos para vender mais ingressos nos jogos em casa.</p>
+                        </div>
+                        <button data-action="upgrade-arena" data-value="capacity" class="mt-4 py-2 bg-slate-800 hover:bg-amber-500 hover:text-black font-bold text-xs rounded-xl transition border border-slate-700">
+                            Construir ($8.0M)
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+                        <div>
+                            <span class="text-2xl mb-2 block">🔊</span>
+                            <h5 class="font-bold text-white text-base">Acústica & Caldeirão</h5>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">Painéis acústicos que ampliam a pressão sonora (+3% fator casa).</p>
+                        </div>
+                        <div class="mt-4">
+                            <span id="upgrade-acoustics-status" class="text-[11px] text-amber-400 block mb-1">Disponível ($5M)</span>
+                            <button data-action="upgrade-arena" data-value="acoustics" class="w-full py-2 bg-slate-800 hover:bg-amber-500 hover:text-black font-bold text-xs rounded-xl transition border border-slate-700">
+                                Instalar Som ($5.0M)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+                        <div>
+                            <span class="text-2xl mb-2 block">🍸</span>
+                            <h5 class="font-bold text-white text-base">Camarotes Executivos</h5>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">Suítes VIP corporativas gerando +$180k garantidos por partida mandante.</p>
+                        </div>
+                        <div class="mt-4">
+                            <span id="upgrade-suites-status" class="text-[11px] text-amber-400 block mb-1">Disponível ($6M)</span>
+                            <button data-action="upgrade-arena" data-value="suites" class="w-full py-2 bg-slate-800 hover:bg-amber-500 hover:text-black font-bold text-xs rounded-xl transition border border-slate-700">
+                                Inaugurar VIP ($6.0M)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+                        <div>
+                            <span class="text-2xl mb-2 block">🏥</span>
+                            <h5 class="font-bold text-white text-base">Fisioterapia Avançada</h5>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">Recuperação de stamina, cura imediata de lesões e menor desgaste.</p>
+                        </div>
+                        <div class="mt-4">
+                            <span id="upgrade-medical-status" class="text-[11px] text-amber-400 block mb-1">Disponível ($4.5M)</span>
+                            <button data-action="upgrade-arena" data-value="medical" class="w-full py-2 bg-slate-800 hover:bg-amber-500 hover:text-black font-bold text-xs rounded-xl transition border border-slate-700">
+                                Contratar ($4.5M)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. ABA: MERCADO & TROCAS -->
+            <div id="tab-trades" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Trade Machine — Mercado da NBA</h3>
+                    <p class="text-xs text-slate-400">Monte pacotes de troca. A IA do outro time avaliará se o negócio é equilibrado e justo.</p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
+                        <div class="md:col-span-3 space-y-3">
+                            <label class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Você Oferece (Sua Franquia):</label>
+                            <select id="trade-my-player" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white text-sm focus:border-amber-400 outline-none"></select>
+                            
+                            <div class="pt-2">
+                                <label class="text-xs text-slate-400 block mb-1">Compensação Financeira Adicional ($M):</label>
+                                <input id="trade-cash-amount" type="number" min="0" max="15" value="0" class="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-xl text-white text-sm font-mono focus:border-amber-400 outline-none">
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-1 text-center py-2">
+                            <span class="text-2xl text-slate-500 block mb-2">⇄</span>
+                            <button data-action="submit-trade" class="px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition transform hover:scale-105">
+                                Propor Troca
+                            </button>
+                        </div>
+
+                        <div class="md:col-span-3 space-y-3">
+                            <label class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Você Recebe (Time Rival):</label>
+                            <select id="trade-opp-team" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white text-sm focus:border-amber-400 outline-none mb-2"></select>
+                            <select id="trade-opp-player" class="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-white text-sm focus:border-amber-400 outline-none"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. ABA: CAIXA DE ENTRADA / E-MAILS -->
+            <div id="tab-inbox" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Caixa de Entrada do GM</h3>
+                    <p class="text-xs text-slate-400">Ouça solicitações de jogadores, relatórios de olheiros e alertas técnicos.</p>
+                </div>
+                <div id="inbox-list-container" class="space-y-4"></div>
+            </div>
+
+            <!-- 8. ABA: CLASSIFICAÇÃO -->
+            <div id="tab-standings" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Tabela de Classificação</h3>
+                    <p class="text-xs text-slate-400">Campanha das equipes na era atual.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-x-auto">
+                        <h4 class="font-bold text-amber-400 text-sm uppercase tracking-wider mb-3 px-2">Conferência Oeste</h4>
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-500 font-mono border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2 px-3">#</th>
+                                    <th class="py-2 px-3">Time</th>
+                                    <th class="py-2 px-3 text-center">V</th>
+                                    <th class="py-2 px-3 text-center">D</th>
+                                    <th class="py-2 px-3 text-center">%</th>
+                                    <th class="py-2 px-3 text-center">Casa</th>
+                                    <th class="py-2 px-3 text-center">Fora</th>
+                                    <th class="py-2 px-3 text-center">Seq</th>
+                                </tr>
+                            </thead>
+                            <tbody id="standings-west-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl overflow-x-auto">
+                        <h4 class="font-bold text-amber-400 text-sm uppercase tracking-wider mb-3 px-2">Conferência Leste</h4>
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-slate-500 font-mono border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2 px-3">#</th>
+                                    <th class="py-2 px-3">Time</th>
+                                    <th class="py-2 px-3 text-center">V</th>
+                                    <th class="py-2 px-3 text-center">D</th>
+                                    <th class="py-2 px-3 text-center">%</th>
+                                    <th class="py-2 px-3 text-center">Casa</th>
+                                    <th class="py-2 px-3 text-center">Fora</th>
+                                    <th class="py-2 px-3 text-center">Seq</th>
+                                </tr>
+                            </thead>
+                            <tbody id="standings-east-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. ABA: SIMULAÇÃO BRASFOOT-STYLE (MATCH CENTER) -->
+            <div id="tab-match" class="tab-content hidden space-y-6">
+                <div class="bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+                    
+                    <div class="flex justify-between items-center text-xs font-mono text-slate-400 mb-6">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="match-quarter-label" class="font-bold text-amber-400">1º QUARTO</span>
+                        </div>
+                        <div id="match-clock-label" class="font-bold text-white text-sm bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">12:00</div>
+                    </div>
+
+                    <div class="grid grid-cols-7 items-center text-center my-4">
+                        <div class="col-span-3 flex flex-col items-center">
+                            <div id="match-home-badge" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-xl mb-2">
+                                <span id="match-home-id">LAL</span>
+                            </div>
+                            <h3 id="match-home-name" class="font-extrabold text-white text-base sm:text-xl">Lakers</h3>
+                            <span class="text-xs text-slate-400">Mandante</span>
+                        </div>
+
+                        <div class="col-span-1 flex flex-col items-center justify-center font-arcade">
+                            <div class="text-4xl sm:text-6xl font-black text-amber-400 tracking-wider">
+                                <span id="match-home-score">0</span>
+                                <span class="text-slate-600 mx-1">:</span>
+                                <span id="match-away-score">0</span>
+                            </div>
+                        </div>
+
+                        <div class="col-span-3 flex flex-col items-center">
+                            <div id="match-away-badge" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-xl mb-2">
+                                <span id="match-away-id">BOS</span>
+                            </div>
+                            <h3 id="match-away-name" class="font-extrabold text-white text-base sm:text-xl">Celtics</h3>
+                            <span class="text-xs text-slate-400">Visitante</span>
+                        </div>
+                    </div>
+
+                    <!-- Radar Visual da Posse: Mini-Quadra Tática 2D -->
+                    <div class="my-6 flex flex-col items-center">
+                        <div class="relative w-full max-w-lg mx-auto rounded-2xl overflow-hidden border-2 border-slate-700/80 shadow-2xl bg-slate-950">
+                            <canvas id="court-radar" width="520" height="260" class="w-full h-auto block"></canvas>
+                            <div id="court-possession-banner" class="absolute top-2.5 left-1/2 -translate-x-1/2 px-3.5 py-1 bg-slate-900/95 border border-amber-500/40 rounded-full text-[11px] font-mono font-bold text-amber-300 shadow-xl backdrop-blur-sm pointer-events-none transition-all duration-200 flex items-center space-x-1.5">
+                                <span>🏀</span>
+                                <span>Disputa de Posse de Bola</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-800 relative">
+                            <div id="match-progress-bar" class="bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-400 h-full transition-all duration-300 w-0"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+                            <span>Q1</span>
+                            <span>Q2 (Intervalo)</span>
+                            <span>Q3</span>
+                            <span>Q4 (Final)</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-slate-800/80">
+                        <div class="flex items-center space-x-2 text-xs">
+                            <span class="text-slate-400">Velocidade:</span>
+                            <button data-action="sim-speed" data-value="1000" data-speed-btn="1000" class="px-2.5 py-1 bg-slate-800 text-slate-300 font-mono rounded">1x</button>
+                            <button data-action="sim-speed" data-value="500" data-speed-btn="500" class="px-2.5 py-1 bg-amber-500 text-black font-mono font-bold rounded">2x</button>
+                            <button data-action="sim-speed" data-value="120" data-speed-btn="120" class="px-2.5 py-1 bg-slate-800 text-slate-300 font-mono rounded">5x</button>
+                            <button data-action="quick-finish" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded border border-slate-700">⚡ Pular p/ Fim</button>
+                        </div>
+
+                        <div id="match-actions-post" class="hidden">
+                            <button data-action="next-round" class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-black rounded-xl shadow-lg transition transform hover:scale-105">
+                                Continuar Temporada ➔
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-3">
+                        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Narração em Tempo Real</h4>
+                        <div id="match-events-ticker" class="space-y-2 max-h-80 overflow-y-auto pr-2"></div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3">Estatísticas dos Titulares</h4>
+                        <div id="match-boxscore-grid" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA: TORNEIO DE PLAYOFFS (MATA-MATA COM BRACKET) -->
+            <div id="tab-playoffs" class="tab-content hidden space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-3">
+                    <div>
+                        <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold uppercase mb-1">
+                            <span>🏆 MATA-MATA PELO TROFÉU LARRY O'BRIEN</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-white font-arcade uppercase tracking-wide">Playoffs da NBA</h3>
+                        <p class="text-xs text-slate-400">Séries eliminatórias em Melhor de 3 (Semifinais e Finais de Conferência) e Melhor de 5 (Finais da NBA).</p>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button data-action="sim-playoffs-round" id="playoffs-sim-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow">
+                            <span>⚡ Simular Demais Séries da Rodada</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Banner de Status da Franquia nos Playoffs -->
+                <div id="playoffs-status-banner"></div>
+
+                <!-- Visual Bracket Grid -->
+                <div id="playoffs-bracket-view" class="space-y-6"></div>
+            </div>
+
+            <!-- ABA: PREMIAÇÕES INDIVIDUAIS DA TEMPORADA (AWARDS GALA) -->
+            <div id="tab-awards" class="tab-content hidden space-y-6">
+                <div class="flex justify-between items-center flex-wrap gap-3">
+                    <div>
+                        <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold uppercase mb-1">
+                            <span>🎖️ CERIMÔNIA ANUAL DA LIGA</span>
+                        </div>
+                        <h3 class="text-2xl font-black text-white font-arcade uppercase tracking-wide">Premiações Oficiais da Temporada</h3>
+                        <p class="text-xs text-slate-400">Consagração das lendas e calouros da era atual. Vencedores recebem buffs de moral e evolução de atributos!</p>
+                    </div>
+                    <button data-action="nav-tab" data-value="draft" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition shadow flex items-center space-x-1">
+                        <span>Ir para o NBA Draft ➔</span>
+                    </button>
+                </div>
+
+                <div id="awards-display-container" class="space-y-6"></div>
+            </div>
+
+            <!-- 10. ABA: DRAFT DA NBA -->
+            <div id="tab-draft" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">NBA Draft Lottery & Prospects Históricos</h3>
+                    <p class="text-xs text-slate-400">Recrute calouros autênticos desta era. Alguns podem ser Joias Raras (💎) ou Decepções (⚠️).</p>
+                </div>
+                <div id="draft-board-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+            </div>
+
+            <!-- 11. ABA: HISTÓRICO & HALL DA FAMA -->
+            <div id="tab-history" class="tab-content hidden space-y-6">
+                <div>
+                    <h3 class="text-xl font-black text-white font-arcade uppercase">Hall da Fama & Histórico de Temporadas</h3>
+                    <p class="text-xs text-slate-400">O legado de sua carreira como Presidente através dos anos.</p>
+                </div>
+                <div id="history-list-container" class="space-y-3"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts do Jogo -->
+    <script src="js/sound.js"></script>
+    <script src="js/teams-data.js"></script>
+    <script src="js/court.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
