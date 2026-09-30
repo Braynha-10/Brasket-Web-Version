@@ -4,6 +4,7 @@ import { BRASSKET_ERAS, getTeamsForEra, getDraftClassForEra } from "./data/teams
 import { createEmptyStandings, generateSchedule, getRoundStatus, getTeamRank } from "./core/season.js";
 import { loadFromStorage, saveToStorage, clearAllSaves, normalizeCareer } from "./core/save.js";
 import { notify } from "./ui/toast.js";
+import { AuthManager } from "./core/auth.js";
 
 // Brassket: NBA Arcade GM - Controlador com Nível de Técnico, Sessões de Treino com Dados e Multitemporadas
 export class BrassketApp {
@@ -15,6 +16,7 @@ export class BrassketApp {
         this._turbo = false;
         this._saveErrorShown = false;
         this.pendingNotice = null;
+        this.authManager = new AuthManager(this);
 
         this.init();
     }
@@ -52,6 +54,10 @@ export class BrassketApp {
         if (!res.ok && !this._saveErrorShown) {
             this._saveErrorShown = true;
             this.notify("⚠️ Não foi possível salvar o progresso (armazenamento cheio ou bloqueado).", "warning");
+        }
+        
+        if (this.authManager && this.state.currentTeamId) {
+            this.authManager.syncUp(this.league, this.state);
         }
     }
 
@@ -423,6 +429,8 @@ export class BrassketApp {
                 this.initNewGameState();
                 this.saveGame();
                 this.render();
+            } else if (action === "open-auth") {
+                if (this.authManager) this.authManager.showModal();
             } else if (action === "resolve-email") {
                 const parts = value.split(":");
                 this.resolveEmailChoice(parseInt(parts[0]), parseInt(parts[1]));
