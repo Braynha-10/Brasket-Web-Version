@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --team-primary: #552583;
+    --team-secondary: #fdb927;
+    --team-glow: rgba(85, 37, 131, 0.4);
+}
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0b0f19;
+}
+.font-arcade {
+    font-family: 'Chakra Petch', sans-serif;
+}
+.font-news {
+    font-family: 'Playfair Display', serif;
+}
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--team-secondary, #f59e0b);
+}
+.tab-active {
+    border-color: var(--team-secondary, #f59e0b) !important;
+    color: var(--team-secondary, #f59e0b) !important;
+}
+    
